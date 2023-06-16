@@ -2,8 +2,10 @@ syntax = "proto3";
 
 package protobuf;
 
+option go_package = "github.com/finallly/streaming-test/src/proto;data";
+
 service StreamService {
-  rpc FetchResponse (Request) returns (stream Response) {}
+  rpc FetchResponse (stream Request) returns (Response) {}
 }
 
 message Request {

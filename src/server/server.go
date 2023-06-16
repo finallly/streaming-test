@@ -7,18 +7,18 @@ import (
 	"sync"
 	"time"
 
-	pb "github.com/pramonow/go-grpc-server-streaming-example/src/proto"
+	pb "github.com/finallly/streaming-test/src/proto"
 
 	"google.golang.org/grpc"
 )
 
 type server struct{}
 
-func (s server) FetchResponse(in *pb.Request, srv pb.StreamService_FetchResponseServer) error {
-
+func (s *server) FetchResponse(in *pb.Request, srv pb.StreamService_FetchResponseServer) error {
 	log.Printf("fetch response for id : %d", in.Id)
 
 	var wg sync.WaitGroup
+
 	for i := 0; i < 5; i++ {
 		wg.Add(1)
 		go func(count int64) {
@@ -45,7 +45,7 @@ func main() {
 
 	// create grpc server
 	s := grpc.NewServer()
-	pb.RegisterStreamServiceServer(s, server{})
+	pb.RegisterStreamServiceServer(s, &server{})
 
 	log.Println("start server")
 	// and start...

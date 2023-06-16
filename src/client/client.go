@@ -5,10 +5,9 @@ import (
 	"io"
 	"log"
 	"math/rand"
-
-	pb "github.com/pramonow/go-grpc-server-streaming-example/src/proto"
-
 	"time"
+
+	pb "github.com/finallly/streaming-test/src/proto"
 
 	"google.golang.org/grpc"
 )
