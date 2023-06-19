@@ -39,6 +39,7 @@ func main() {
 				&message,
 			},
 		})
+		log.Printf("message with id %d sent", index)
 
 		if err == io.EOF {
 			return
