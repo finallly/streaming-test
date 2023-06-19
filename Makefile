@@ -1,17 +1,6 @@
-all: protoc client server
+generate: protoc
 
 protoc:
-	@echo "Generating Go files"
-	cd src/proto && protoc --go_out=:. *.proto
+	cd src/proto && protoc --go_out=:. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative data.proto
 
-server: protoc
-	@echo "Building server"
-	go build -o server \
-		github.com/finallly/streaming-test/src/server
-
-client: protoc
-	@echo "Building client"
-	go build -o client \
-		github.com/finallly/streaming-test/src/client
-
-.PHONY: client server protoc
+.PHONY: protoc

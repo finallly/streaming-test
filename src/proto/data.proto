@@ -4,14 +4,23 @@ package protobuf;
 
 option go_package = "github.com/finallly/streaming-test/src/proto;data";
 
+import "google/protobuf/empty.proto";
+
 service StreamService {
-  rpc FetchResponse (stream Request) returns (Response) {}
+  rpc StartStream (stream Stream) returns (google.protobuf.Empty) {}
 }
 
-message Request {
+message Object {}
+
+message Message {
+  oneof content {
+    int64 number = 1;
+    string word = 2;
+    Object object = 3;
+  }
+}
+
+message Stream {
   int32 id = 1;
-}
-
-message Response {
-  string result = 1;
+  repeated Message message = 2;
 }

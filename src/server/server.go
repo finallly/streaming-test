@@ -1,56 +1,73 @@
 package main
 
 import (
-	"fmt"
+	data "github.com/finallly/streaming-test/src/proto"
+	"google.golang.org/grpc"
+	"io"
 	"log"
 	"net"
-	"sync"
-	"time"
-
-	pb "github.com/finallly/streaming-test/src/proto"
-
-	"google.golang.org/grpc"
+	"reflect"
 )
 
-type server struct{}
+type server struct {
+	data.UnimplementedStreamServiceServer
+}
 
-func (s *server) FetchResponse(in *pb.Request, srv pb.StreamService_FetchResponseServer) error {
-	log.Printf("fetch response for id : %d", in.Id)
+func (s *server) StartStream(stream data.StreamService_StartStreamServer) error {
+	for {
+		message, err := stream.Recv()
 
-	var wg sync.WaitGroup
+		if err == io.EOF {
+			return nil
+		}
 
-	for i := 0; i < 5; i++ {
-		wg.Add(1)
-		go func(count int64) {
-			defer wg.Done()
-			time.Sleep(time.Duration(count) * time.Second)
-			resp := pb.Response{Result: fmt.Sprintf("Request #%d For Id:%d", count, in.Id)}
-			if err := srv.Send(&resp); err != nil {
-				log.Printf("send error %v", err)
-			}
-			log.Printf("finishing request number : %d", count)
-		}(int64(i))
+		if err != nil {
+			log.Fatal("error receiving message from stream", err.Error())
+		}
+
+		log.Printf("received message number: %d, message size: %d", message.GetId(), getSize(message.GetMessage()))
+		//time.Sleep(time.Millisecond * 300) - тут эмулируем чтение сервером сообщений
 	}
-
-	wg.Wait()
-	return nil
 }
 
 func main() {
-	// create listiner
-	lis, err := net.Listen("tcp", ":50005")
+	listener, err := net.Listen("tcp", "localhost:50005")
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		log.Fatalf("could not listen: %v", err)
 	}
 
-	// create grpc server
 	s := grpc.NewServer()
-	pb.RegisterStreamServiceServer(s, &server{})
+	data.RegisterStreamServiceServer(s, &server{})
 
-	log.Println("start server")
-	// and start...
-	if err := s.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
+	if err := s.Serve(listener); err != nil {
+		log.Fatalf("could not start the server: %v", err)
 	}
+}
 
+func getSize(v interface{}) int {
+	size := int(reflect.TypeOf(v).Size())
+	switch reflect.TypeOf(v).Kind() {
+	case reflect.Slice:
+		s := reflect.ValueOf(v)
+		for i := 0; i < s.Len(); i++ {
+			size += getSize(s.Index(i).Interface())
+		}
+	case reflect.Map:
+		s := reflect.ValueOf(v)
+		keys := s.MapKeys()
+		size += int(float64(len(keys)) * 10.79)
+		for i := range keys {
+			size += getSize(keys[i].Interface()) + getSize(s.MapIndex(keys[i]).Interface())
+		}
+	case reflect.String:
+		size += reflect.ValueOf(v).Len()
+	case reflect.Struct:
+		s := reflect.ValueOf(v)
+		for i := 0; i < s.NumField(); i++ {
+			if s.Field(i).CanInterface() {
+				size += getSize(s.Field(i).Interface())
+			}
+		}
+	}
+	return size
 }
